@@ -1,0 +1,17 @@
+import sys
+
+# changes encoding of resulting string
+settings.encoding = 'utf-8'
+settings.cache = never
+settings.cache = 3 # seconds
+settings.autoformat = False
+
+# output some data to 
+write("I am cool!")
+
+res = load('somefile.html')
+write(res)
+
+write('this shouldn\'t be written')
+
+exit()
