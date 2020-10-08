@@ -128,7 +128,7 @@ class HierarchicalPyghssHTTPRequestHandler(LoggingBaseHTTPRequestHandler, Simple
             fullpath = pathtools.abspath(self.directory + path)
             for ending in HypertextGenerator.SUPPORTED_ENDINGS + ('',):
                 scriptfile = fullpath + ending
-                logger.debug(scriptfile)
+                logger.debug('try %s', scriptfile)
                 if pathtools.exists(scriptfile) and not pathtools.isdir(scriptfile):
                     hgs = HypertextGenerator(scriptfile)
                     self.scriptdict[path] = hgs
@@ -137,7 +137,11 @@ class HierarchicalPyghssHTTPRequestHandler(LoggingBaseHTTPRequestHandler, Simple
             # we have ourselves a script
             self.logger.info('Executing PyHG Script %s', path)
             # TODO override options?
-            data = hgs.execute()
+            headers, data = hgs.execute()
+            self.send_response(200)
+            for header, value in headers.items():
+                self.send_header(header, value)
+            self.end_headers()
             self.wfile.write(data)
             return
         # if that fails, dispatch to simplehttp if required, check mime header if necessary

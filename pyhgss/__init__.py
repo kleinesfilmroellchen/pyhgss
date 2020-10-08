@@ -3,6 +3,7 @@ import io
 import logging
 import sys
 from hashlib import sha1
+from typing import Tuple, Dict
 
 from chardet.universaldetector import UniversalDetector
 
@@ -64,9 +65,10 @@ class HypertextGenerator(object):
         self.fileencoding = guess_encoding(filename)
         self._filehash = None
         self._code = None
-        logger.debug('Guessed encoding %s for file %s', self.fileencoding, self.filename)
+        self.logger = logging.getLogger(__name__ + '.HypertextGenerator')
+        self.logger.debug('Guessed encoding %s for file %s', self.fileencoding, self.filename)
 
-    def execute(self, override_opts=None) -> bytes:
+    def execute(self, override_opts=None) -> Tuple[Dict[str, str], bytes]:
         if override_opts is None:
             override_opts = {}
         # TODO handle overriding execution options
@@ -77,6 +79,7 @@ class HypertextGenerator(object):
             while newpart:
                 contents += newpart
                 newpart = scriptfile.read(self.BUFFER_SIZE)
+        # re-encode file into utf-8 bytes
         bytecontents = bytes(contents, encoding='utf-8')
 
         filecode = None
@@ -84,25 +87,26 @@ class HypertextGenerator(object):
             # hash file and compare it to old hash
             digest = sha1(bytecontents).digest()
             if digest == self._filehash:
-                logger.info('Using old compilation with hash %s', self._filehash)
+                self.logger.info('Using old compilation with hash %s', self._filehash)
                 # we don't need to recompile the file
                 filecode = self._code
         # no code generated yet
         if filecode is None:
             self._filehash = sha1(bytecontents).digest()
-            filecode = compile(contents, self.filename, 'exec', optimize=2)
-            logger.debug('Recompiled file %s (hash %s) to code object %s',
+            filecode = compile(contents, filename=self.filename, mode='exec', optimize=2)
+            self.logger.debug('Recompiled file %s (hash %s) to code object %s',
                 self.filename, self._filehash, filecode)
             self._code = filecode
-            logger.debug('Code set')
 
         environment_object = make_environment()
+        # inform environment of file encoding
+        environment_object.file_encoding = self.fileencoding
         try:
             exec(filecode, environment_object)
         except _ScriptExited:
             pass
 
-        return environment_object.data
+        return (environment_object.headers, environment_object.data)
 
 
 logger.info('pyhgss initialized, version %s.', __version__)
