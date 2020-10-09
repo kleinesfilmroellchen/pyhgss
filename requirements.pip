@@ -1,3 +1,6 @@
 stackprinter
 sphinx
 sphinx_rtd_theme
+chardet
+beautifulsoup4
+css-parser

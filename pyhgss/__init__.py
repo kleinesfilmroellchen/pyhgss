@@ -23,7 +23,7 @@ else:
 __version__ = '0.1a1'
 
 
-def guess_encoding(filename:str) -> str:
+def guess_encoding(filename: str) -> str:
     '''
     Guesses the file's encoding by using an incremental universal detector from chardet.
     '''
@@ -31,7 +31,8 @@ def guess_encoding(filename:str) -> str:
     with open(filename, 'rb') as file:
         for line in file:
             detector.feed(line)
-            if detector.done: break
+            if detector.done:
+                break
     detector.close()
     return detector.result['encoding']
 
@@ -53,26 +54,27 @@ class HypertextGenerator(object):
     # max number of file bytes to read at once
     BUFFER_SIZE = 300
 
-    def __init__(self, filename:str):
+    def __init__(self, filename: str):
         if not filename.endswith(self.SUPPORTED_ENDINGS):
             logger.warning(
                 'File %(filename)s does not end with any of the supported endings (%(endings)s). It is strongly recommended to use the \'%(preferredending)s\' ending.',
-                {'filename':filename,
-                'endings':', '.join(self.SUPPORTED_ENDINGS),
-                'preferredending':self.SUPPORTED_ENDINGS[0]
-            })
+                {'filename': filename,
+                 'endings': ', '.join(self.SUPPORTED_ENDINGS),
+                 'preferredending': self.SUPPORTED_ENDINGS[0]
+                 })
         self.filename = filename
         self.fileencoding = guess_encoding(filename)
         self._filehash = None
         self._code = None
         self.logger = logging.getLogger(__name__ + '.HypertextGenerator')
-        self.logger.debug('Guessed encoding %s for file %s', self.fileencoding, self.filename)
+        self.logger.debug('Guessed encoding %s for file %s',
+                          self.fileencoding, self.filename)
 
     def execute(self, override_opts=None) -> Tuple[Dict[str, str], bytes]:
         if override_opts is None:
             override_opts = {}
         # TODO handle overriding execution options
-        
+
         contents = str()
         with open(self.filename, 'r', encoding=self.fileencoding) as scriptfile:
             newpart = scriptfile.read(self.BUFFER_SIZE)
@@ -87,15 +89,17 @@ class HypertextGenerator(object):
             # hash file and compare it to old hash
             digest = sha1(bytecontents).digest()
             if digest == self._filehash:
-                self.logger.info('Using old compilation with hash %s', self._filehash)
+                self.logger.info(
+                    'Using old compilation with hash %s', self._filehash)
                 # we don't need to recompile the file
                 filecode = self._code
         # no code generated yet
         if filecode is None:
             self._filehash = sha1(bytecontents).digest()
-            filecode = compile(contents, filename=self.filename, mode='exec', optimize=2)
+            filecode = compile(
+                contents, filename=self.filename, mode='exec', optimize=2)
             self.logger.debug('Recompiled file %s (hash %s) to code object %s',
-                self.filename, self._filehash, filecode)
+                              self.filename, self._filehash, filecode)
             self._code = filecode
 
         environment_object = make_environment()
@@ -112,7 +116,8 @@ class HypertextGenerator(object):
 logger.info('pyhgss initialized, version %s.', __version__)
 
 if __name__ == "__main__":
-    logging.basicConfig(format='%(levelname)s [%(name)s]: %(message)s', level=logging.DEBUG)
+    logging.basicConfig(
+        format='%(levelname)s [%(name)s]: %(message)s', level=logging.DEBUG)
     logger.setLevel(logging.DEBUG)
     logging.getLogger('environment').setLevel(5)
     # sg = HypertextGenerator('examplegenerator.pyh')

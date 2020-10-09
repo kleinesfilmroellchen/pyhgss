@@ -13,6 +13,7 @@ if __name__ == 'serve' or __name__ == '__main__':
 else:
     from . import HypertextGenerator, make_environment
 
+
 class LoggingBaseHTTPRequestHandler(BaseHTTPRequestHandler):
     '''
     Short extension of the BaseHTTPRequestHandler that redirects logging output
@@ -79,7 +80,7 @@ class HierarchicalPyghssHTTPRequestHandler(LoggingBaseHTTPRequestHandler, Simple
     '''
     HTTP Request handler (to be used with HTTPServer or any of its subclasses) for serving
     PyHG scripts from a folder and its subfolders starting at the given directory.
-    
+
     When scripts are not found for a GET request path, the handling is passed on to
     SimpleHTTPRequestHandler's do_GET method for static file serving.
 
@@ -94,6 +95,7 @@ class HierarchicalPyghssHTTPRequestHandler(LoggingBaseHTTPRequestHandler, Simple
         `Content-Type: text/html` header, the file will be served. This also
         means that directory listings are served.
     '''
+
     def __init__(self, *args, scriptdict=None, serve_arbitrary_files=True, **kwargs):
         if scriptdict is None:
             # use a private scriptdict
@@ -115,7 +117,7 @@ class HierarchicalPyghssHTTPRequestHandler(LoggingBaseHTTPRequestHandler, Simple
         """
         # first try sending a script
         url = urllib.parse.urlparse(self.path)
-        
+
         path = posixpath.normpath(url.path)
         self.logger.debug(path)
 
@@ -166,7 +168,6 @@ class HierarchicalPyghssHTTPRequestHandler(LoggingBaseHTTPRequestHandler, Simple
                 self.send_error(404)
 
 
-
 class SinglePyghssHTTPRequestHandler(LoggingBaseHTTPRequestHandler):
     '''
     Handler class that executes a single PyGH script for every request on the
@@ -183,27 +184,36 @@ class SinglePyghssHTTPRequestHandler(LoggingBaseHTTPRequestHandler):
     # all da http
     def do_GET(self):
         self.execute_request('GET')
+
     def do_HEAD(self):
         self.execute_request('HEAD')
+
     def do_POST(self):
         self.execute_request('POST')
+
     def do_PUT(self):
         self.execute_request('PUT')
+
     def do_DELETE(self):
         self.execute_request('DELETE')
+
     def do_PATCH(self):
         self.execute_request('PATCH')
+
     def do_CONNECT(self):
         self.execute_request('CONNECT')
+
     def do_TRACE(self):
         self.execute_request('TRACE')
+
     def do_OPTIONS(self):
         self.execute_request('OPTIONS')
 
-    def execute_request(self, methodstr:str):
+    def execute_request(self, methodstr: str):
         self.logger.info('%s request on %s', methodstr, self.filename)
         binary = self.script.execute()
         self.wfile.write(binary)
+
 
 class MultiplePyhgssHTTPRequestHandler(LoggingBaseHTTPRequestHandler):
     '''
@@ -223,26 +233,34 @@ class MultiplePyhgssHTTPRequestHandler(LoggingBaseHTTPRequestHandler):
     # all da http
     def do_GET(self):
         self.execute_request('GET')
+
     def do_HEAD(self):
         self.execute_request('HEAD')
+
     def do_POST(self):
         self.execute_request('POST')
+
     def do_PUT(self):
         self.execute_request('PUT')
+
     def do_DELETE(self):
         self.execute_request('DELETE')
+
     def do_PATCH(self):
         self.execute_request('PATCH')
+
     def do_CONNECT(self):
         self.execute_request('CONNECT')
+
     def do_TRACE(self):
         self.execute_request('TRACE')
+
     def do_OPTIONS(self):
         self.execute_request('OPTIONS')
 
-    def execute_request(self, methodstr:str):
-        logger.info('%s %s request on scripts %s', methodstr, self.path, self.files)
+    def execute_request(self, methodstr: str):
+        logger.info('%s %s request on scripts %s',
+                    methodstr, self.path, self.files)
         path = posixpath.normpath(urllib.parse.urlparse(self.path).path)
         binary = self.scripts[path].execute()
         self.wfile.write(binary)
-
