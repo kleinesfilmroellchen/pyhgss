@@ -131,7 +131,9 @@ class HierarchicalPyghssHTTPRequestHandler(LoggingBaseHTTPRequestHandler, Simple
             for ending in HypertextGenerator.SUPPORTED_ENDINGS + ('',):
                 scriptfile = fullpath + ending
                 logger.debug('try %s', scriptfile)
-                if pathtools.exists(scriptfile) and not pathtools.isdir(scriptfile):
+                if (pathtools.exists(scriptfile)
+                    and not pathtools.isdir(scriptfile)
+                        and not self.is_legal_static_file(scriptfile)):
                     hgs = HypertextGenerator(scriptfile)
                     self.scriptdict[path] = hgs
 
@@ -166,6 +168,17 @@ class HierarchicalPyghssHTTPRequestHandler(LoggingBaseHTTPRequestHandler, Simple
             else:
                 self._headers_buffer = []
                 self.send_error(404)
+
+    def is_legal_static_file(self, scriptfile: bool):
+        '''Checks whether a given script file is a legal non-script static file under this request handler's serving rules.'''
+        if self.toserve == None:
+            return False
+        if self.toserve == 'html':
+            return scriptfile.endswith('.html')
+        elif self.toserve == 'all':
+            return not any((scriptfile.endswith(ending) for ending in HypertextGenerator.SUPPORTED_ENDINGS))
+        else:
+            return False
 
 
 class SinglePyghssHTTPRequestHandler(LoggingBaseHTTPRequestHandler):
