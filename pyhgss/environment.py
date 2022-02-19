@@ -1,3 +1,5 @@
+from pathlib import Path
+from util import guess_encoding
 import logging
 import time
 import sys
@@ -66,7 +68,9 @@ class HypertextGenerationEnvironment(dict):
             __name__ + '.' + str(abs(hash(self)))[:6])
         self.data = bytes()
         self.file_encoding = 'utf-8'
+        self.__selected_autoformatter = lambda html: html.prettify()
         self.headers = dict()
+        self.script_name = './'
         # global namespaces
 
     # hijack dictionary lookup when this object is used as a globals() -dict
@@ -150,9 +154,10 @@ class HypertextGenerationEnvironment(dict):
         self.logger.debug('Write HTML %s', html)
         if tag is not None:
             html = html.wrap(html.new_tag(tag))
-        self.data += bytes(html.prettify(), encoding=self.file_encoding)
+        self.data += bytes(self.__selected_autoformatter(html),
+                           encoding=self.file_encoding)
 
-    def load(self, filename: str, type: Type = None):
+    def load(self, filename: str, type_: Type = None):
         '''
         Load data from a file.
 
@@ -162,15 +167,31 @@ class HypertextGenerationEnvironment(dict):
 
         * **HTML:** The file's text content is given to BeautifulSoup4's 'html.parser' parser, and the result is returned to the user. This gives the user a perfectly normal BS4 parsed HTML tree which can then be manipulated. All of the I/O functions of the PyHGS system can deal with BS4 objects.
         * **JavaScript:** Returns a wrapper :py:class:`HypertextGenerationEnvironment.JSCode`. This simply contains the JavaScript of the file. See the documentation of the class to find out more about working with JSCode objects.
-        * **CSS:**
+        * **CSS:** The file's text content is wr
 
         Otherwise, the plain text of the file is returned as a string.
 
         :param filename: Specify the filename, always in relation to the script's file location.
         :param type: Specify the file type, in the form ``Type.*``, where * is one of the supported file type identifiers. This overrides the file type auto-detection.
         '''
-        self.logger.debug('Load call with filename %s', filename)
-        return ''
+        filename = str(
+            Path(self.script_name).parent.joinpath(filename).absolute())
+        encoding = guess_encoding(filename)
+        self.logger.debug(
+            'Loading file %s, guessed encoding %s', filename, encoding)
+
+        with open(filename, 'r', encoding=encoding) as file:
+            contents = file.read()
+
+        match type_:
+            case Type.HTML:
+                output = bs4.BeautifulSoup(contents)
+            case Type.JavaScript:
+                output = HypertextGenerationEnvironment.JSCode(contents)
+            case _:
+                output = contents
+
+        return output
 
     def header(self, key: str, value: str):
         '''
@@ -190,9 +211,15 @@ class HypertextGenerationEnvironment(dict):
         :param value: The value that was assigned to the setting.
         '''
         self.logger.debug('Change setting %s to value %s', setting_name, value)
-        # switch case
-        if setting_name == 'encoding':
-            self.file_encoding = value
+        match setting_name:
+            case 'encoding':
+                self.file_encoding = str(value)
+            case 'autoformat':
+                if bool(value):
+                    self.__selected_autoformatter = lambda html: html.prettify()
+                else:
+                    self.__selected_autoformatter = lambda html: str(html)
+
         return value
 
     def setting_changer(self):

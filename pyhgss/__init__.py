@@ -1,11 +1,9 @@
 #!usr/bin/env python3
-import io
 import logging
 import sys
 from hashlib import sha1
 from typing import Tuple, Dict
 
-from chardet.universaldetector import UniversalDetector
 
 logger = logging.getLogger(__name__)
 
@@ -15,26 +13,14 @@ if __name__ == "__init__":
     from cli import cli
     from environment import ScriptExited as _ScriptExited
     from environment import make_environment
+    from util import guess_encoding
 else:
     from .cli import cli
     from .environment import ScriptExited as _ScriptExited
     from .environment import make_environment
+    from .util import guess_encoding
 
 __version__ = '0.1a1'
-
-
-def guess_encoding(filename: str) -> str:
-    '''
-    Guesses the file's encoding by using an incremental universal detector from chardet.
-    '''
-    detector = UniversalDetector()
-    with open(filename, 'rb') as file:
-        for line in file:
-            detector.feed(line)
-            if detector.done:
-                break
-    detector.close()
-    return detector.result['encoding']
 
 
 class HypertextGenerator(object):
@@ -105,6 +91,7 @@ class HypertextGenerator(object):
         environment_object = make_environment()
         # inform environment of file encoding
         environment_object.file_encoding = self.fileencoding
+        environment_object.script_name = self.filename
         try:
             exec(filecode, environment_object)
         except _ScriptExited:
