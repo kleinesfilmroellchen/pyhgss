@@ -3,6 +3,7 @@ import logging
 import sys
 from hashlib import sha1
 from typing import Tuple, Dict
+from pathlib import Path
 
 
 logger = logging.getLogger(__name__)
@@ -88,16 +89,25 @@ class HypertextGenerator(object):
                               self.filename, self._filehash, filecode)
             self._code = filecode
 
-        environment_object = make_environment()
+        environment_object = make_environment(
+            encoding=self.fileencoding, script_name=self.filename, module_name=self.module_for_file(self.filename))
         # inform environment of file encoding
-        environment_object.file_encoding = self.fileencoding
-        environment_object.script_name = self.filename
         try:
             exec(filecode, environment_object)
         except _ScriptExited:
             pass
 
         return (environment_object.headers, environment_object.data)
+
+    def module_for_file(self, filename: str) -> str:
+        '''Return the Python module name for the given file name. This depends on the current directory.'''
+        current_directory = Path('.').resolve()
+        relative_path = str(Path(filename).relative_to(current_directory))
+        module_with_ending = relative_path.replace('\\', '/').replace('./', '.').replace('/', '.')
+        # The sorting ensures that the replace doesn't catch wrong substrings of endings.
+        for ending in sorted(HypertextGenerator.SUPPORTED_ENDINGS, key=len,reverse=True):
+            module_with_ending = module_with_ending.replace(ending, '')
+        return module_with_ending
 
 
 logger.info('pyhgss initialized, version %s.', __version__)

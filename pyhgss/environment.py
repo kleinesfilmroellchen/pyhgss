@@ -16,9 +16,9 @@ class ScriptExited(Exception):
     pass
 
 
-def make_environment():
+def make_environment(**kwargs):
     '''Returns a new :py:class:`HypertextGenerationEnvironment`. This method is intended for more complicated environment setup in the future.'''
-    hge = HypertextGenerationEnvironment()
+    hge = HypertextGenerationEnvironment(**kwargs)
     hge.headers['Content-Type'] = 'text/html; charset=UTF-8'
     hge.__dict__.update(Type._member_map_)
     return hge
@@ -59,7 +59,7 @@ class HypertextGenerationEnvironment(dict):
             '''The string conversion wraps the code in a simple script tag.'''
             return '<script>' + self.code + '</script>'
 
-    def __init__(self):
+    def __init__(self, script_name: str, module_name: str, encoding: str):
         '''
         The constructor of the environment does not take any arguments.
         '''
@@ -67,11 +67,15 @@ class HypertextGenerationEnvironment(dict):
         self.logger = logging.getLogger(
             __name__ + '.' + str(abs(hash(self)))[:6])
         self.data = bytes()
-        self.file_encoding = 'utf-8'
+        self.file_encoding = encoding
         self.__selected_autoformatter = lambda html: html.prettify()
         self.headers = dict()
-        self.script_name = './'
-        # global namespaces
+        self.script_name = script_name
+        self.module_name = module_name
+
+    @property
+    def __name__(self):
+        return self.module_name
 
     # hijack dictionary lookup when this object is used as a globals() -dict
     # redirect the lookup to setattr/getattr for easy method & variable defintion
@@ -80,6 +84,11 @@ class HypertextGenerationEnvironment(dict):
         Overrides :py:meth:`dict.__getitem__`.
 
         Is used here to intercept all global lookups and redirect them to the normal :py:meth:`HypertextGenerationEnvironment.__getattribute__`.'''
+
+        # __name__ can't be set as an attribute because Python
+        if name == '__name__':
+            self.logger.debug('Getting __name__')
+            return self.module_name
 
         if name not in PRIVATE_METHODS:
             return self.__getattribute__(name)
@@ -108,7 +117,12 @@ class HypertextGenerationEnvironment(dict):
         if name == 'settings' or name == 'setting':
             val = self.setting_changer()
         else:
-            val = super().__getattribute__(name)
+            try:
+                val = super().__getattribute__(name)
+            except AttributeError:
+                self.logger.debug("Looking up %s in parent", name)
+                # TODO: this is probably not a good idea
+                val = globals()[name]
         return val
 
     def __setattr__(self, name: str, value):
@@ -172,7 +186,7 @@ class HypertextGenerationEnvironment(dict):
         Otherwise, the plain text of the file is returned as a string.
 
         :param filename: Specify the filename, always in relation to the script's file location.
-        :param type: Specify the file type, in the form ``Type.*``, where * is one of the supported file type identifiers. This overrides the file type auto-detection.
+        :param type_: Specify the file type, in the form ``Type.*``, where * is one of the supported file type identifiers. This overrides the file type auto-detection.
         '''
         filename = str(
             Path(self.script_name).parent.joinpath(filename).absolute())

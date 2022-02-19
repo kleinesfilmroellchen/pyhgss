@@ -1,10 +1,13 @@
-import sys
+print(__builtins__)
+# this blows up and Python doesn't let me override __name__ AAAAAAAAAAAAAAAAAAAA
+# from .module import square
+
 
 # changes encoding of resulting string
 settings.encoding = 'utf-8'
 settings.cache = never
 settings.cache = 3 # seconds
-settings.autoformat = False
+settings.autoformat = True
 
 # output some data to 
 write("I am cool!")
@@ -12,6 +15,7 @@ write("I am cool!")
 res = load('somefile.html')
 write(res)
 
-write('this shouldn\'t be written')
+write("This is bold", "b")
 
 exit()
+write('this shouldn\'t be written')
